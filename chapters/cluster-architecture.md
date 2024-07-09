@@ -42,10 +42,12 @@
 ### 2. Worker node or Node
    What is a worker node?
    Worker nodes host Pods that are the components of the application workload.
+   What is a Pods?
+   Pod is composed of a group of containers in an isolated environment with resource constraints. In Kubernetes, pod is the smallest schedulable unit.
    Node Components:
    1. Kubelet: agent that runs on each node in the cluster. It makes sure that containers are running in a Pod.
    The kubelet takes a set of PodSpecs that are provided through various mechanisms and ensures that the containers described in those PodSpecs are running and healthy.
-   2. kube-proxy: 
+   2. kube-proxy:
    - network-proxy that runs on each node in your cluster implementing part of the Kubernetes Service concept.
    - kube-proxy maintains network rules on nodes. These network rules allow network communication to your Pods from network sessions inside or outside of your cluster.
    - kube-proxy uses the operating system packet filtering layer (iptables, kernalspaces, ipvs) if there is one and it's available. Otherwise, kube-proxy forwards the traffic itself.
@@ -60,4 +62,20 @@
    # display iptables
    sudo iptables -t nat -L KUBE_SERVICES -n 
    ```
-   https://www.youtube.com/watch?v=y58U33yOIhY
+   DEMO: https://www.youtube.com/watch?v=y58U33yOIhY
+
+   2. Container runtime:
+   - A fundamental component that empowers Kubernetes to run containers effectively. It is responsible for managing the execution and lifecycle of containers within the Kubernetes environment.
+   What is CRI?
+   CRI (Container Runtime Interface) consists of a specifications/requirements (to-be-added), protobuf API, and libraries for container runtimes to integrate with kubelet on a node. The CRI API is currently in Alpha, and the CRI-Docker integration is used by default as of Kubernetes 1.7+.
+   - supports container runtimes such as:
+      1. containerd
+      2. CRI-O. 
+      3. rktlet
+      4. frakti
+      5. singularity-cri
+   - Kubernetes CRI (Container Runtime Interface): https://github.com/kubernetes/community/blob/master/contributors/devel/sig-node/container-runtime-interface.md
+   Why does Kubernetes need CRI? 
+   - Previously K8s was using Docker as the main workhouse, however that means it was dependent on Docker to be its container manager and container runtime. There is also an overlap in the features that both K8s and Docker can do, such as networking. There is also demand for other runtime tools such are CRI-O. 
+   - In the end, k8s decided that it is better to create/maintain a standard for other tools to adhere. So as long as the tools adhere to the Container Runtime Interface, it will be able to work with Kubernetes
+   - Example: openshift uses CRI-O as it container runtime 
