@@ -84,5 +84,12 @@
    General able to use any DNS structure available as a plugin. However, coreDNS is the default since 1.13, before its kube-dns
    CoreDNS
    - Able to integrate with etcd and cloud vendor (AWS Route 53) eg, authoriative server seats in AWS. coreDNS can pull from there. 
-   - support Prometheus metrices  
+   - support Prometheus metrices
+   - port 53 by default
+   ![alt text](/chapters/images/coredns-example.png)
+   ```bash
+   # access Corefile
+   kubectl describe configmap corefile -n kube-system
+   # Although the name is coredns is it still a kube-dns system
+   ```
    
