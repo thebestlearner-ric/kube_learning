@@ -79,3 +79,10 @@
    - Previously K8s was using Docker as the main workhouse, however that means it was dependent on Docker to be its container manager and container runtime. There is also an overlap in the features that both K8s and Docker can do, such as networking. There is also demand for other runtime tools such are CRI-O. 
    - In the end, k8s decided that it is better to create/maintain a standard for other tools to adhere. So as long as the tools adhere to the Container Runtime Interface, it will be able to work with Kubernetes
    - Example: openshift uses CRI-O as it container runtime 
+
+   3. DNS
+   General able to use any DNS structure available as a plugin. However, coreDNS is the default since 1.13, before its kube-dns
+   CoreDNS
+   - Able to integrate with etcd and cloud vendor (AWS Route 53) eg, authoriative server seats in AWS. coreDNS can pull from there. 
+   - support Prometheus metrices  
+   
