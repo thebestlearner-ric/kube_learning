@@ -82,6 +82,47 @@
 
    3. DNS
    General able to use any DNS structure available as a plugin. However, coreDNS is the default since 1.13, before its kube-dns
+   How does a DNS work?
+   The 8 steps in a DNS lookup:
+   1. A user types ‘example.com’ into a web browser and the query travels into the Internet and is received by a DNS recursive resolver.
+   2. The resolver then queries a DNS root nameserver (.).
+   3. The root server then responds to the resolver with the address of a Top Level Domain (TLD) DNS server (such as .com or .net), which stores the information for its domains. When searching for example.com, our request is pointed toward the .com TLD.
+   4. The resolver then makes a request to the .com TLD.
+   5. The TLD server then responds with the IP address of the domain’s nameserver, example.com.
+   6. Lastly, the recursive resolver sends a query to the domain’s nameserver.
+   7. The IP address for example.com is then returned to the resolver from the nameserver.
+   8. The DNS resolver then responds to the web browser with the IP address of the domain requested initially.
+   https://www.cloudflare.com/en-gb/learning/dns/what-is-dns/
+   Iterative Vs Rescurive Query
+   ![alt text](/chapters/images/iterativeVsRecursive.png)
+   Different Levels of DNS
+   ![alt text](/chapters/images/different-domain-levels
+   .png)
+   Recursive DNS resolver
+   Example in pictures:
+   ![alt text](/chapters/images/DNS-explained.png)
+      - Different types of Records
+      1. CNAME or Canonical Name: is a DNS record that basically points a domain name at another domain name.
+         - CNAME must always be a domain, never an IP address
+         - useful when running multiple service on a single domain. eg www.example.com, ftp.example.com
+         Flow: Web browser -> DNS Recursive Resolver -> DNS Root Nameserver -> DNS TLD Nameserver -> cloudflare.com Authoritative Nameserver -> blog.cloudflare.com Authoritative Nameserver         
+      2. NS: authoritative name servers for a domain
+         - a domain have generally 2 Authoritative name server for reliablity
+         - 1 primary, 1 secondary
+         Flow: Web browser -> DNS Recursive Resolver -> DNS Root Nameserver -> DNS TLD Nameserver -> Cloudflare.com Authoritative Nameserver
+      3. A: indicate the IPv4 addresses available for resolution
+      4. AAAA: indicate the  IPv6 address available for resolution
+      ```bash
+         #queries for NS
+         nslookup -type=ns google.com
+         #queries for CNAME
+         nslookup -q=cname test.google.com # returns the domain google.com
+         dig google.com CNAME 
+         #queries for A
+         nslookup -q=A google.com # returns the IP addresses
+         dig google.com A
+      ```
+
    CoreDNS
    - Able to integrate with etcd and cloud vendor (AWS Route 53) eg, authoriative server seats in AWS. coreDNS can pull from there. 
    - support Prometheus metrices
@@ -92,4 +133,91 @@
    kubectl describe configmap corefile -n kube-system
    # Although the name is coredns is it still a kube-dns system
    ```
+   example of a stub domains:
+   main point: 
+   1. Forward some out-of-cluster domains directly to the right authoritative DNS server
+   2. Handle internal corporate domains
+   ```yaml
+      corporate.com:53 {
+         proxy . <DNS-IP-corporate>
+      }
+      on.prem.organisation.com:53 {
+         proxy . <DNS-IP-local-corporate>
+      }
+      .:53 {
+         errors            #Enable error logging
+         health {          #Serve liveness status on http 8080
+            lameduck 5s
+         }
+         ready
+         kubernetes cluster.local in-addr.arpa ip6.arpa { #Backend to k8s for cluster.local and reverse domains
+            pods insecure                                 #Mimic kube-dns pod records behaviour
+            fallthrough in-addr.arpa ip6.arpa             #Resolve CNAME targets upstream
+            ttl 30                                        #Continue searching reverse zones
+         }
+         prometheus :9153                                 #Serve prometheus metrics
+         forward . /etc/resolv.conf {
+            max_concurrent 1000
+         }
+         proxy mycompany.com 10.2.4.5
+         proxy . /etc/resolv.conf                         #Forward other domains to /etc/resolv.conf ns
+         cache 30                                         #Cache for up to 30 seconds
+         loop                                             #DNS protocol loop check
+         reload                                           #Reload server if the Corefile change
+         loadbalance                                      #Shuffle order of returned records
+      }
+   ```
+   coredns Cache tuning
+   1. Allow specific configuration for known zone, cache, logging ...
+   ```yaml
+   corporate.com:53 {
+      errors
+      log innerservices.coporate.com
+      proxy local.corporate.com <DNS-IP-local>
+      proxy . <DNS-IP-corporate>
+      cache 3600
+   }
+   on.prem.organisation.com:53 {
+      proxy . <DNS-IP-local-corporate>
+   }
+   .:53 {
+      ...
+      kubernetes cluster.local ... {
+         ...
+      }
+      proxy . /etc/resolv.conf
+      ...
+      cache 30
+   }
+   ```
+   Common Options for Cluster DNS
+   1. pods [disabled|insecure|verified]
+   2. endpoint_pod_names
+   3. ttl (time to live)
+   4. fallthrough [ZONES]
+
+   All Kubernetes Plugin Options
+   ```yaml
+   kubernetes [ZONES...] {
+      endpoint URL
+      tls CERT KEY CACERT
+      kubeconfig KUBECONFIG [CONTEXT]
+      namespaces NAMESPACE...
+      labels EXPRESSION
+      pods POD-MODE
+      endpoint_pod_names
+      ttl TTL
+      noendpoints
+      fallthrough [ZONES...]
+      ignore empty_service
+   }
+   ```
+   Connect to Kubernetes with CoreDNS running outside the cluster:
+   ```yaml
+   kubernetes cluster.local {
+      endpoint https://k8s-endpoint:8443
+      tls cert key cacert
+   }
+   ```
+
    
